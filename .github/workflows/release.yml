@@ -44,7 +44,7 @@ jobs:
           echo "Tarball contents:"
           tar -tzf "$ASSET"
           # Fail if any entry does not start with the module id folder
-          UNEXPECTED=$(tar -tzf "$ASSET" | grep -v "^${{ steps.vars.outputs.module_id }}/")
+          UNEXPECTED=$(tar -tzf "$ASSET" | grep -v "^${{ steps.vars.outputs.module_id }}/" || true)
           if [ -n "$UNEXPECTED" ]; then
             echo "ERROR: unexpected paths at tarball root: $UNEXPECTED"
             exit 1
