@@ -1,0 +1,84 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'play'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=play",
+          "--features=player,cpal-output",
+        ],
+        "filter": {
+          "name": "play",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'play-script'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=play-script",
+          "--features=player,cpal-output",
+        ],
+        "filter": {
+          "name": "play-script",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug tests",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+        ],
+      },
+      "args": [
+        "--test",
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmarks",
+      "cargo": {
+        "args": [
+          "bench",
+          "--no-run",
+        ],
+      },
+      "args": [
+        "--bench",
+        "--profile-time",
+        "100",
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lua",
+      "name": "Debug current Lua File",
+      "request": "launch",
+      "program": "${file}",
+      "arg": [],
+      "stopOnEntry": true,
+    },
+  ]
+}

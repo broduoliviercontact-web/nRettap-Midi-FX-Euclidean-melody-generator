@@ -1,0 +1,203 @@
+# Implement Native Schwung MIDI FX
+
+## Purpose
+Use this skill to implement the native engine of a Schwung MIDI FX module.
+
+This skill assumes the module should process MIDI at the engine layer and optionally generate timed events.
+
+## Goal
+Build a stable native MIDI FX implementation that:
+- transforms or generates MIDI correctly
+- exposes parameters cleanly
+- behaves correctly in the Signal Chain
+- is safe with note lifecycle and state restore
+- can be edited from the UI and chain context
+
+## Recommended Strategy
+Follow the two-layer split used in this project:
+
+1. **Portable engine** (`dsp/<module>_engine.h` + `dsp/<module>_engine.c`) — no Schwung/Move headers
+2. **Host wrapper** (`host/<module>_plugin.c`) — Schwung plugin API, MIDI dispatch, param I/O
+
+Inspect the existing module (Tumble) as the reference pattern before implementing.
+
+Prefer a clear separation between:
+- instance state
+- MIDI input handling
+- timed event generation
+- parameter parsing
+- state serialization
+
+## Native Implementation Plan
+
+### 1. Define Instance State
+Create a per-instance struct that contains:
+- current parameter values
+- internal working state
+- note tracking (`active_note[]`, `active_channel[]`)
+- timing counters (`frames_until_step`, `frames_left` for scheduled events)
+- clock sync state (`running`, `sync_mode`)
+- any scheduled event queue
+
+### 2. Define MIDI Behavior
+Document exactly how the module responds to:
+- note on / note off / velocity-0 note on
+- CC
+- MIDI clock (`0xFA/0xFB/0xFC/0xF8`)
+- transport start/stop/continue
+- pass-through of unsupported messages
+
+Be explicit about which messages are consumed, transformed, or passed through.
+
+### 3. Handle Timed Generation
+If the module generates timed notes or CC:
+- decide whether timing comes from Move transport (`get_bpm()`) or internal BPM
+- use `tick()` for emitting events over time
+- define reset rules on stop / mode change / parameter change
+
+### 4. Implement Parameter I/O
+Implement:
+- `set_param(instance, key, value)` — validates, clamps, updates engine
+- `get_param(instance, key, buf, len)` — **must return `snprintf(...)`, never `return 0`**
+- `save_state()` / `load_state()` with key=value string format
+- `chain_params` in `module.json` if chain editing matters
+
+### 5. Manage Note Lifecycle Safely
+Always protect against:
+- stuck notes on transport stop
+- stuck notes on mode change
+- stuck notes on state restore
+- missing note-offs when held note state is cleared
+- mode changes while notes are sounding
+
+Pattern: always send note-off for active notes before resetting state.
+
+### 6. Add Defensive Parsing
+When parsing parameter strings or state:
+- validate values before applying
+- clamp numeric ranges
+- handle missing keys gracefully
+- `atof()` / `atoi()` for numeric params, explicit string comparison for enums
+- never crash on malformed state
+
+## Transport Sync — Critical
+
+### Clock Status
+`get_clock_status()` returns `MOVE_CLOCK_STATUS_UNAVAILABLE` when "MIDI Clock Out" is not enabled in Move settings. Treat `UNAVAILABLE` the same as `STOPPED`.
+
+Use the Brindille pattern in `tick()`:
+```c
+if (inst->sync_mode == 0 && g_host && g_host->get_clock_status) {
+    int status = g_host->get_clock_status();
+    if (status == MOVE_CLOCK_STATUS_STOPPED ||
+        status == MOVE_CLOCK_STATUS_UNAVAILABLE) {
+        inst->running = 0;
+    } else if (status == MOVE_CLOCK_STATUS_RUNNING) {
+        inst->running = 1;
+    }
+} else if (inst->sync_mode != 0) {
+    inst->running = 1;
+}
+```
+
+Initialize `running = 0` in `create_instance`. Never initialize to 1.
+
+### Hardware-Proven Clock Pattern
+Do not assume that `tick()` plus `get_clock_status()` is sufficient for every time-based `midi_fx` module.
+
+Hardware-proven Move behavior:
+- the wrapper may receive `0xFA` and repeated `0xF8` in `process_midi()`
+- a sequencer can fail to start on Play if it ignores those clock bytes
+
+For clock-driven sequencers, arps, and generators, prefer this ownership model:
+- `0xFA`: restart transport state and emit or arm the first step immediately
+- `0xFB`: resume running state
+- `0xFC`: stop and flush active notes
+- `0xF8`: advance the sequence timeline
+- note-off scheduling may also need to live in the same `0xF8` path if note duration is expressed in clock ticks
+
+If MIDI clock bytes own the transport timeline, `tick()` should not also advance that same musical clock.
+
+### Free-Running Clock
+If the module does NOT need transport sync, do NOT call `get_clock_status()` or `get_bpm()` — this causes SIGSEGV on some Move firmware versions.
+
+Use a constant:
+```c
+#define DEFAULT_BPM 120.0f
+static float current_bpm(void) { return DEFAULT_BPM; }
+// create_instance: inst->running = 1;
+```
+
+### sync_warn — user-visible feedback
+If transport sync requires MIDI Clock Out, expose a `sync_warn` virtual param:
+```c
+if (strcmp(key, "sync_warn") == 0) {
+    if (inst->sync_mode == 0 && g_host && g_host->get_clock_status) {
+        int status = g_host->get_clock_status();
+        if (status == MOVE_CLOCK_STATUS_UNAVAILABLE)
+            return snprintf(buf, buf_len, "Enable MIDI Clock Out");
+        if (status == MOVE_CLOCK_STATUS_STOPPED)
+            return snprintf(buf, buf_len, "stopped");
+    }
+    return snprintf(buf, buf_len, "");
+}
+```
+
+## Required Engineering Checklist
+- [ ] All parameters have defaults in `create_instance`
+- [ ] Note lifecycle is explicit and stuck notes are prevented
+- [ ] Unsupported MIDI is passed through or intentionally filtered
+- [ ] Clock behavior is explicit and documented
+- [ ] Transport stop resets `running = 0`
+- [ ] `get_clock_status()` treats UNAVAILABLE as not-running
+- [ ] If the module is clock-driven, ownership of timing between `process_midi(0xF8)` and `tick()` is explicit
+- [ ] `0xFA` behavior is explicit: immediate first step vs armed first step
+- [ ] `sync_warn` or equivalent if transport sync requires user action
+- [ ] State restore is deterministic
+- [ ] `chain_params` matches real parameter support
+- [ ] `get_param` returns `snprintf(...)` for all params, `-1` for unknown
+
+## Requested vs Effective Values
+- If one parameter is constrained by another at runtime, preserve the user-facing requested value when that improves editing and recall
+- Example: keep `requested_fills` separate from effective `fills=min(requested_fills, steps)`
+- `get_param()` and custom UI should usually expose the requested value, not silently rewrite it to the effective one
+- Do not add dynamic UI clamping unless that behavior is truly intended
+
+## Required Output Format
+When using this skill, produce:
+
+### Engine Summary
+One paragraph describing the runtime model.
+
+### Instance State
+Show the struct layout (both engine struct and plugin instance struct if split).
+
+### MIDI Rules
+List the exact MIDI message behavior.
+
+### Functions to Implement
+List the required functions and purpose of each.
+
+### Edge Cases
+List the failure cases and how they are handled.
+
+### Code
+Generate both the engine and host wrapper files.
+
+### Self-Review
+At the end, review the implementation for:
+- stuck note risk
+- invalid state risk
+- timing drift risk
+- pass-through correctness
+- `get_param` return value correctness
+- parameter/UI mismatch vs `module.json`
+
+## Guardrails
+- Do not emit notes without a reliable note-off strategy.
+- Do not hide timing assumptions.
+- Do not implement chain parameters that are not actually supported.
+- Do not let malformed state crash the module.
+- Do not call `get_clock_status()` or `get_bpm()` in free-running modules.
+- Do not silently split timing ownership between `tick()` and `process_midi()`.
+- Prefer boring reliability over clever abstractions.

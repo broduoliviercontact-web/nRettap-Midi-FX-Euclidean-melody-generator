@@ -1,0 +1,101 @@
+[package]
+categories = ["multimedia::audio"]
+description = "Experimental, dynamic, imperative music sequence generator"
+edition = "2021"
+exclude = ["assets", "examples", "benches"]
+keywords = ["audio", "sequencer", "lua", "live_coding", "renoise"]
+license = "GNU AFFERO"
+name = "pattrns"
+readme = "README.md"
+repository = "https://github.com/renoise/pattrns"
+version = "0.9.3"
+
+[dependencies]
+lazy_static = { version = "^1.4" }
+paste = { version = "^1.0" }
+derive_more = { version = "^2.0", default-features = false, features = [
+    "display",
+    "from",
+    "into",
+] }
+log = { version = "^0.4" }
+rand = { version = "^0.9", features = ["thread_rng"], default-features = false }
+rand_xoshiro = { version = "^0.7" }
+num-rational = { version = "^0.4", default-features = false }
+num-traits = { version = "^0.2", default-features = false }
+pest = { version = "^2.7", default-features = false }
+pest_derive = { version = "^2.7" }
+
+# optional -> dhat-profiler
+dhat = { version = "^0.3", optional = true }
+
+# optional -> scripting
+mlua = { version = "^0.11", features = [
+    "error-send",
+    "vendored",
+], optional = true }
+
+# optional -> player
+crossbeam-channel = { version = "^0.5", default-features = false, optional = true }
+dashmap = { version = "^6.1", optional = true }
+phonic = { version = "^0.11", default-features = false, optional = true }
+
+# dev dependencies
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+pretty_assertions = { version = "^1.4" }
+notify = { version = "^8.0", default-features = false, features = ["macos_fsevent"] }
+ctrlc = { version = "^3.4" }
+criterion = { version = "^0.7", default-features = false }
+simplelog = { version = "^0.12", default-features = false, features = [
+    "termcolor",
+] }
+
+# enable debug symbols in all builds
+[profile.dev]
+debug = "full"
+[profile.bench]
+debug = "full"
+[profile.release]
+debug = "full"
+
+[features]
+# enables profiling in examples
+dhat-profiler = ["dhat"]
+
+# example player implementation
+player = ["crossbeam-channel", "dashmap", "phonic"]
+# example player's audio output driver 
+web-output = ["phonic/web-output"]
+cpal-output = ["phonic/cpal-output"]
+
+# lua scripting
+scripting = ["mlua"]
+
+# lua scripting interpreter backends (mutually exclusive)
+# all featured interpreters should be compatible with lua51
+lua = ["mlua/lua51"]
+lua-jit = ["mlua/luajit"]
+luau = ["mlua/luau"]
+luau-jit = ["mlua/luau-jit"]
+
+# default features enable scripting with a luaJIT interpreter
+default = ["scripting", "lua-jit"]
+
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["scripting", "lua-jit", "player", "cpal-output"]
+
+[lib]
+bench = false
+
+[[bench]]
+name = "benches"
+harness = false
+
+[[example]]
+name = "play"
+required-features = ["player", "cpal-output"]
+
+[[example]]
+name = "play-script"
+required-features = ["scripting", "player", "cpal-output"]
