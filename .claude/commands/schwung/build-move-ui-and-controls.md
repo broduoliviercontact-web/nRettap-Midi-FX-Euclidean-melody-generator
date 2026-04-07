@@ -27,6 +27,11 @@ Make the module feel native on Move. The user should understand and control the 
 
 **Pads and step buttons only if they add musical value.** Don't use them because they're there — use them when the interaction is immediate and obvious.
 
+**Prefer clear macro/fine pairs over long flat parameter lists.** Generative modules often become easier to learn when paired controls each own one job:
+- `range` + `spread`
+- `density` + `rest`
+- `chaos` + `resolve`
+
 ---
 
 ## Typical Knob Candidates (ordered by priority)
@@ -36,6 +41,13 @@ Direct knob access (no shift) — most important live controls:
 - Mode or character selector (enum)
 - Musical timing (rate, division, tempo)
 - Output target (note, channel, range)
+
+For generative note modules, a strong default ordering is often:
+- harmonic identity first (`root`, `scale`)
+- register second (`range`, `spread`)
+- phrase amount third (`density`)
+- behavior next (`chaos`, `resolve`, `rest`)
+- setup params (`steps`, `gate`, `vel`) in the full param list unless they are central to performance
 
 Shift layer — secondary adjustments:
 - Fine-tuning of primary controls
@@ -51,6 +63,7 @@ Read `src/module.json` — knobs list, params list, chain_params. Identify:
 - Which parameters are musically critical (direct knob)
 - Which are setup parameters (menu or shift)
 - Which are too dangerous to expose in chain context
+- Which parameter pairs are likely to be tweaked together in live use
 
 ### Step 2 — Define the Knob Map
 
@@ -62,6 +75,11 @@ Read `src/module.json` — knobs list, params list, chain_params. Identify:
 | 8 | least frequent | — |
 
 Maximum 8 direct knobs. Be ruthless — fewer is better for V1.
+
+If there are more than 8 meaningful params:
+- keep exploratory controls on the live knobs
+- move setup controls to the full param list
+- do not hide a constantly-used musical control behind shift
 
 ### Step 3 — Define Shift Behavior
 Only add shift behavior when it genuinely improves usability. Each shift+knob pair should be immediately intuitive. Do not use shift to compensate for a parameter surface that is too large.
@@ -159,3 +177,4 @@ Any non-obvious patterns, warning displays, or edge cases in the interaction mod
 - Do not let LED behavior distract from the music.
 - Always align control keys with the exact keys in `module.json` and the engine.
 - Keep V1 UI deliberately simple. Complexity can be added later.
+- For generative modules, do not expose too many overlapping "probability" knobs — users should hear what each knob owns.

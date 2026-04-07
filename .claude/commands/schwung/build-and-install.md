@@ -53,12 +53,7 @@ ssh root@move.local 'ls -la /data/UserData/schwung/modules/midi_fx/<module_id>'
 ## Step 4 — Restart Schwung
 
 ```bash
-ssh root@move.local 'cd /data/UserData/schwung && nohup ./start.sh >/tmp/start_schwung.log 2>&1 </dev/null &'
-```
-
-Wait a few seconds, then check the log:
-```bash
-ssh root@move.local 'cat /tmp/start_schwung.log'
+ssh root@move.local 'pkill -x schwung || true; sleep 1; nohup /data/UserData/schwung/schwung >/tmp/schwung.log 2>&1 </dev/null &'
 ```
 
 ## Step 5 — Smoke Test
@@ -77,6 +72,7 @@ Minimum check:
 3. Start Move transport
 4. Confirm output starts and stops cleanly
 5. Confirm no stuck notes after Stop
+6. Confirm all exposed params really edit from both the main UI and chain context
 
 ## Common Failures
 
@@ -97,6 +93,10 @@ Minimum check:
 **`get_param` values not displaying in UI**
 - Check that `get_param` returns `snprintf(buf, buf_len, ...)` not `return 0`
 - Returning 0 silently breaks param display and chain editing
+
+**Some params edit, others do nothing**
+- Check `chain_params` shape in `module.json` — use full parameter objects
+- Check int/enum parsing for raw values, float-formatted values, and normalized strings
 
 **Transport doesn't start the module**
 - Verify "MIDI Clock Out" is enabled in Move settings (required for `get_clock_status()`)

@@ -20,6 +20,7 @@ Before drafting, inspect:
 - Prefer a compact, Move-friendly parameter surface
 - Use a clean `capabilities` structure consistent with the existing module
 - If chain editing matters, include `chain_params` matching real editable controls
+- Use full parameter objects inside `chain_params`, not just key strings
 
 ## Module Identity Rules
 
@@ -65,6 +66,50 @@ Standard MIDI FX:
 - Every parameter must have a sensible `default`
 - Knob assignments must match the most important controls (ordered by musical priority)
 - `chain_params` should be the live-editable subset — omit parameters that are unsafe to edit in chain context
+- If an `int` parameter is musically signed, declare the real negative range explicitly
+- Keep enum option order stable and intentional — normalized Move knob values depend on enum index
+- For generative modules, prefer paired controls with distinct jobs instead of several overlapping probability params
+
+## Scale / Mode Parameters
+
+If the module exposes a melodic palette, prefer an explicit enum:
+
+```json
+{
+  "key": "scale",
+  "name": "Scale",
+  "type": "enum",
+  "options": [
+    "ionian",
+    "aeolian",
+    "dorian",
+    "mixolydian",
+    "major_pent",
+    "minor_pent",
+    "suspended",
+    "power"
+  ],
+  "default": "ionian"
+}
+```
+
+Good expansion options when the design justifies them:
+- `phrygian`
+- `lydian`
+- `harmonic_minor`
+- `blues`
+
+More advanced options for strongly flavored modules:
+- `locrian`
+- `melodic_minor`
+- `whole_tone`
+- `diminished`
+- `phrygian_dominant`
+
+Rules:
+- keep the option order stable once released
+- use the same names in `module.json`, wrapper parsing, save/load, and docs
+- do not rename `mode` to `scale` or vice versa mid-project without handling compatibility
 
 ## Supported Types
 
@@ -73,6 +118,14 @@ Standard MIDI FX:
 { "key": "bar", "name": "Bar", "type": "int", "min": 1, "max": 32, "default": 16, "step": 1 }
 { "key": "mode", "name": "Mode", "type": "enum", "options": ["a", "b", "c"] }
 { "key": "active", "name": "Active", "type": "toggle", "default": false }
+```
+
+`chain_params` should mirror the same schema shape:
+
+```json
+[
+  { "key": "density", "name": "Density", "type": "float", "min": 0.0, "max": 1.0, "default": 0.7, "step": 0.01 }
+]
 ```
 
 ## Decision Rules

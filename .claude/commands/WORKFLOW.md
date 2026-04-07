@@ -47,9 +47,12 @@ Skills de génération de fichiers. Produisent directement du code ou du JSON : 
 | Figer les paramètres et capacités | `create-module-json` |
 | Générer le moteur natif | `create-dsp-c` |
 | Générer le wrapper host Schwung | `create-host-wrapper` |
+| Générer les tests natifs | `create-test` |
+| Améliorer ou réviser une implémentation existante | `implement-native-midi-fx` |
 | Construire l'interface Move | `build-move-ui-and-controls` |
 | Vérifier la cohérence globale entre les fichiers | `convert-open-source-midi-fx` |
 | Préparer une version installable | `build-and-install` |
+| Publier une release GitHub installable comme custom module Schwung | `publish-custom-module` |
 
 ---
 
@@ -64,6 +67,7 @@ Skills de génération de fichiers. Produisent directement du code ou du JSON : 
 /create-module-json ...
 /create-dsp-c ...
 /create-host-wrapper ...
+/create-test ...
 /build-move-ui-and-controls ...   (si UI custom justifiée)
 /convert-open-source-midi-fx ...  (revue de cohérence)
 /build-and-install
@@ -77,6 +81,7 @@ Skills de génération de fichiers. Produisent directement du code ou du JSON : 
 /create-module-json ...
 /create-dsp-c ...
 /create-host-wrapper ...
+/create-test ...
 /build-and-install
 ```
 
@@ -84,10 +89,13 @@ Skills de génération de fichiers. Produisent directement du code ou du JSON : 
 
 ```
 /repo-bootstrap
-/implement-native-midi-fx
+/implement-native-midi-fx   ← révision de l'implémentation existante
+/create-test ...            ← si des tests manquent
 /build-move-ui-and-controls
 /build-and-install
 ```
+
+`implement-native-midi-fx` est un skill de **révision** : il relit le code en place, identifie les lacunes (stuck notes, params manquants, clock incorrecte) et propose des corrections ciblées. À utiliser après que les fichiers existent, pas pour les générer de zéro.
 
 Avec une consigne ciblée :
 > Review and improve the current implementation. Do not redesign everything. Focus on note safety, parameter coherence, and Move usability.
@@ -138,6 +146,12 @@ Keep timing explicit and deterministic.
 /create-host-wrapper [module et params]
 ```
 
+### Étape 6b — Tests natifs
+```
+/create-test [module et comportements à couvrir]
+Cover: param defaults, get_param return values, note lifecycle, save/load round-trip.
+```
+
 ### Étape 7 — UI (si justifiée)
 ```
 /build-move-ui-and-controls
@@ -154,6 +168,11 @@ Check for mismatches, stuck note risk, and Move UX clarity.
 ### Étape 9 — Deploy
 ```
 /build-and-install
+```
+
+### Étape 10 — Publication custom module
+```
+/publish-custom-module
 ```
 
 ---
@@ -207,6 +226,12 @@ Ne pas valider si : des paramètres ne servent à rien, les noms sont flous, les
 **Erreur 7 — Ne pas relire la note lifecycle**
 Toujours vérifier avant de passer à l'étape suivante : stuck notes, note-off manquants, reset sur transport stop.
 
+**Erreur 8 — Croire que tous les paramètres Move arrivent au même format**
+Toujours prévoir raw int, raw float, et normalized float pour les params éditables.
+
+**Erreur 9 — Confondre densité globale et forme des silences**
+Si les deux comportements sont musicalement distincts, séparer les paramètres.
+
 ---
 
 ## Ce qu'on attend à chaque étape
@@ -217,7 +242,8 @@ Toujours vérifier avant de passer à l'étape suivante : stuck notes, note-off 
 | Design | "Je sais exactement ce que je construis" |
 | `module.json` | "Les paramètres et capacités sont figés" |
 | `create-dsp-c` | "Le moteur est propre, les stuck notes sont impossibles" |
-| `create-host-wrapper` | "Tous les paramètres sont exposés et testés" |
+| `create-host-wrapper` | "Tous les paramètres sont exposés et wrapés" |
+| `create-test` | "`make test` passe — get_param, note lifecycle, save/load couverts" |
 | `build-and-install` | "Ça tourne sur Move, le hardware test est passé" |
 
 ---

@@ -62,6 +62,20 @@ Implement:
 - `save_state()` / `load_state()` with key=value string format
 - `chain_params` in `module.json` if chain editing matters
 
+When implementing editable params for Move, assume `value` may arrive as:
+- raw int strings such as `"7"` or `"-12"`
+- raw float strings such as `"7.0000"` or `"64.0000"`
+- normalized strings such as `"0.5000"`
+
+For int params:
+- support signed ranges when musically useful
+- map normalized `0.0–1.0` values back into the declared min/max
+- accept float-formatted raw ints without misclassifying them as normalized values
+
+For enum params:
+- accept enum names, raw numeric indices, and normalized float strings
+- keep enum option order stable once exposed in the UI
+
 ### 5. Manage Note Lifecycle Safely
 Always protect against:
 - stuck notes on transport stop
@@ -79,6 +93,22 @@ When parsing parameter strings or state:
 - handle missing keys gracefully
 - `atof()` / `atoi()` for numeric params, explicit string comparison for enums
 - never crash on malformed state
+
+### 7. Separate Musical Jobs Cleanly
+When a module grows beyond a trivial V1, prefer parameters that each do one clear job:
+- overall occupancy vs silence character
+- register size vs upward bias
+- randomness vs return-to-home gravity
+
+Good examples:
+- `density` = how many steps speak
+- `rest` = how silences cluster and breathe
+- `range` = the register shape
+- `spread` = how much the line leans upward inside that range
+- `chaos` = instability
+- `resolve` = attraction back to root
+
+Avoid one overloaded parameter trying to do both macro amount and micro character.
 
 ## Transport Sync — Critical
 
@@ -137,7 +167,10 @@ if (strcmp(key, "sync_warn") == 0) {
 - [ ] `sync_warn` or equivalent if transport sync requires user action
 - [ ] State restore is deterministic
 - [ ] `chain_params` matches real parameter support
+- [ ] `chain_params` uses real parameter objects when chain editing is required
 - [ ] `get_param` returns `snprintf(...)` for all params, `-1` for unknown
+- [ ] Int and enum params parse raw, float-formatted, and normalized Move values
+- [ ] Signed transposition params are reflected correctly in both code and `module.json`
 
 ## Required Output Format
 When using this skill, produce:

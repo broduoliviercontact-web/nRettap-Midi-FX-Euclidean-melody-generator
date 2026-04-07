@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set release vars
+        id: vars
+        run: |
+          MODULE_ID=$(python3 -c 'import json; print(json.load(open("src/module.json"))["id"])')
+          VERSION=$(python3 -c 'import json; print(json.load(open("src/module.json"))["version"])')
+          echo "module_id=${MODULE_ID}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "asset=${MODULE_ID}-module.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Install cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build for aarch64
+        run: make aarch64 CC_CROSS=aarch64-linux-gnu-gcc
+
+      - name: Package
+        run: |
+          chmod +x scripts/package.sh
+          ./scripts/package.sh
+
+      - name: Verify tarball structure
+        run: |
+          ASSET="dist/${{ steps.vars.outputs.asset }}"
+          echo "Tarball contents:"
+          tar -tzf "$ASSET"
+          # Fail if any entry does not start with the module id folder
+          UNEXPECTED=$(tar -tzf "$ASSET" | grep -v "^${{ steps.vars.outputs.module_id }}/")
+          if [ -n "$UNEXPECTED" ]; then
+            echo "ERROR: unexpected paths at tarball root: $UNEXPECTED"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ steps.vars.outputs.asset }}
+          name: "nRettap v${{ steps.vars.outputs.version }}"
+          body: |
+            ## nRettap ${{ steps.vars.outputs.version }}
+
+            Euclidean melody generator for Ableton Move.
+
+            ### Install
+            Download `${{ steps.vars.outputs.asset }}` and extract it to:
+            ```
+            /data/UserData/schwung/modules/midi_fx/${{ steps.vars.outputs.module_id }}/
+            ```
+            Or use the Schwung custom module installer with `release.json`.
+
+      - name: Update release.json on main
+        run: |
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.vars.outputs.asset }}"
+          python3 -c "
+          import json, sys
+          with open('release.json') as f:
+              data = json.load(f)
+          data['version'] = '${{ steps.vars.outputs.version }}'
+          data['download_url'] = '${DOWNLOAD_URL}'
+          with open('release.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git add release.json
+          git diff --staged --quiet || git commit -m "chore: update release.json for ${{ github.ref_name }}"
+          git push origin main

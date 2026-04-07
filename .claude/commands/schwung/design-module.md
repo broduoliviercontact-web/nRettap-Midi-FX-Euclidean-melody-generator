@@ -50,6 +50,50 @@ Parameter rules:
 - Knob assignments must match the most important controls
 - Chain editing params (`chain_params`) should include the live-editable subset
 
+If the module is melodic, decide explicitly whether it needs a `scale` / `mode` parameter.
+
+### Scale Design Process
+If pitch output depends on a note palette, define scales before writing code:
+
+1. Decide whether the module needs:
+- one fixed palette
+- a small `scale` enum
+- or a reduced V1 with only 3–6 useful scales
+
+2. Separate clearly:
+- `root` = transposition
+- `scale` = pitch vocabulary
+- `range` = register shape
+- `spread` = upward bias inside that register
+
+3. Prefer scales that are immediately playable on Move.
+
+Recommended starter palette for generative melodic modules:
+- `ionian`
+- `aeolian`
+- `dorian`
+- `mixolydian`
+- `major_pent`
+- `minor_pent`
+- `suspended`
+- `power`
+
+Good expansion set when the module needs more color:
+- `phrygian`
+- `lydian`
+- `harmonic_minor`
+- `blues`
+
+Advanced color set for more distinctive modules:
+- `locrian`
+- `melodic_minor`
+- `whole_tone`
+- `diminished`
+- `phrygian_dominant`
+
+4. Keep V1 selective.
+Do not add scales just to look complete. Add them when each one creates a distinct musical behavior.
+
 ### 4. File Layout
 Minimal files for a native MIDI FX:
 ```

@@ -74,6 +74,9 @@ Before building for hardware, check cross-file alignment:
 - [ ] Every parameter in `module.json` has a `set_param` handler
 - [ ] Every parameter in `module.json` has a `get_param` handler with correct return
 - [ ] All `chain_params` keys match actual engine support
+- [ ] `chain_params` uses full parameter objects when chain editing is expected
+- [ ] Signed int ranges in `module.json` match engine clamp behavior
+- [ ] Enum option order matches the wrapper's normalized parsing logic
 
 **Note lifecycle:**
 - [ ] Note-on always paired with a future note-off
@@ -94,6 +97,7 @@ Before building for hardware, check cross-file alignment:
 - [ ] All params saved in `save_state` are loaded in `load_state`
 - [ ] Missing keys use defaults — no crash on incomplete state
 - [ ] Restoring state does not leave active notes
+- [ ] Parameters survive both raw and normalized-value recall paths
 
 **Move UX:**
 - [ ] Knob keys match actual parameter keys
@@ -125,6 +129,7 @@ Follow `docs/HARDWARE_TESTING.md`.
 Confirm:
 - Module appears in MIDI FX slot
 - All parameters display and edit correctly
+- Int and enum params edit correctly from both normal UI and chain context
 - MIDI output starts and stops cleanly with transport
 - No stuck notes after Stop, mode change, or module removal
 - State recalls correctly after session reload

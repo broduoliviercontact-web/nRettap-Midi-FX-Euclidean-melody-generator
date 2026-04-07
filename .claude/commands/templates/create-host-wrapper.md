@@ -54,6 +54,25 @@ typedef struct {
 - Call the engine setter
 - Update internal sync/mode flags as needed
 
+Assume Move may send parameter values as:
+- raw ints: `"7"`, `"-12"`
+- raw float-formatted values: `"7.0000"`, `"64.0000"`
+- normalized floats: `"0.5000"`
+
+For editable int params:
+- support signed ranges when declared in `module.json`
+- accept both raw values and normalized values
+- do not mistake raw float-formatted ints for normalized values
+
+For enum params:
+- accept enum names, raw indices, and normalized float values
+- keep enum option order aligned with `module.json`
+
+For `scale` / `mode` enums specifically:
+- accept the canonical names from `module.json`
+- optionally accept a few obvious aliases such as `major` → `ionian`, `minor` → `aeolian`, `sus` → `suspended`
+- if the project renamed a parameter, keep temporary backward compatibility in parsing when possible
+
 ## `get_param` Rules — Critical
 
 **Always return `snprintf(buf, buf_len, ...)`.** Never `return 0` for a valid param.
@@ -83,6 +102,8 @@ return -1;
 - For free-running modules, do NOT call `get_clock_status()` or `get_bpm()`
 - Emit scheduled MIDI events using `host_output_midi()`
 - Call engine `tick()` and emit results as MIDI note on/off
+
+If host clock APIs are known to be unsafe on the target firmware, it is acceptable to sync from raw MIDI transport and clock bytes instead, as long as the behavior is explicit and testable.
 
 ## `save_state` / `load_state` Rules
 
@@ -117,3 +138,9 @@ Return exactly:
    - any parameter/module.json mismatch
 
 Do not generate the engine layer, `module.json`, or UI files in this step.
+
+## Guardrails
+- Do not assume Move only sends one string format for params.
+- Do not expose a param in `module.json` without implementing matching parse + format paths here.
+- Do not let `save_state` and `load_state` drift from the actual editable parameter list.
+- For scale-bearing modules, do not let wrapper names drift from the engine enum order or the manifest options.

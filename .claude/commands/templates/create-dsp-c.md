@@ -71,6 +71,46 @@ Coding rules:
 - Keep comments focused and useful
 - Generate real compilable C, not pseudocode
 
+## Scale Handling Pattern
+
+If the module is melodic, encode scales in the engine, not in the UI layer.
+
+Recommended pattern:
+- store `scale` as a small enum index
+- keep one interval table in the engine
+- derive generated notes from:
+  - base note or `root`
+  - selected scale interval
+  - optional range/register offset
+
+Example starter interval families for 4-state melodic generators:
+- `ionian`: `{0, 4, 7, 12}`
+- `aeolian`: `{0, 3, 7, 12}`
+- `dorian`: `{0, 3, 7, 10}`
+- `mixolydian`: `{0, 4, 7, 10}`
+- `major_pent`: `{0, 4, 7, 14}`
+- `minor_pent`: `{0, 3, 7, 10}`
+- `suspended`: `{0, 5, 7, 12}`
+- `power`: `{0, 7, 12, 19}`
+
+Useful expansion set:
+- `phrygian`: `{0, 1, 7, 10}`
+- `lydian`: `{0, 4, 6, 11}`
+- `harmonic_minor`: `{0, 3, 7, 11}`
+- `blues`: `{0, 3, 6, 10}`
+
+Advanced flavor set:
+- `locrian`: `{0, 1, 6, 10}`
+- `melodic_minor`: `{0, 3, 7, 11}`
+- `whole_tone`: `{0, 4, 8, 10}`
+- `diminished`: `{0, 3, 6, 9}`
+- `phrygian_dominant`: `{0, 1, 4, 10}`
+
+Rules:
+- keep scale order stable once the wrapper and manifest expose it
+- clamp unknown scale indices to the last valid scale or a documented default
+- do not hardcode scale names only in comments; keep the enum, interval table, and wrapper names aligned
+
 ## Return Format
 
 Return exactly:
