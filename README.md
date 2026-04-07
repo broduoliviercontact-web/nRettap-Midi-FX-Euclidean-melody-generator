@@ -1,40 +1,52 @@
-# Pattrn
+# nRettap
 
-**Euclidean melody generator for Ableton Move**
+Euclidean melody generator for Ableton Move, built as a Schwung `midi_fx` module.
 
-`Pattrn` is a chainable `midi_fx` module for Schwung on Ableton Move. It takes a compact Euclidean rhythm core, applies probability, then turns each trigger into a scale-quantized melodic note.
-
-The design is inspired by the musical ideas behind `pattrns`, but adapted as a reduced Schwung-native module for Move rather than a faithful port of the original project.
+`nRettap` is a compact pattern generator inspired by Renoise `pattrns`, rewritten for Move as a transport-synced MIDI effect. It emits notes directly into the next instrument in the chain and starts on `Play`, without needing an incoming note to wake it up.
 
 ## Features
 
-- Euclidean rhythm generation with `fills`, `steps`, and `rotation`
-- Probability gate with `chance`
-- 5 phrase modes: `up`, `down`, `pendulum`, `random`, `thirds`
-- Scale-quantized melodic output
-- Root note and scale selection
-- Span control for melodic range
-- Seeded deterministic variation
-- Move transport sync
-- Starts on `Play` without requiring a played or sequenced input note
-- Minimal custom UI for direct knob control and sync warning display
+- Euclidean rhythm core with `fills`, `steps`, and `rotation`
+- Melodic phrases with `up`, `down`, `pendulum`, `random`, and `thirds`
+- Scale quantization with root and span control
+- Deterministic variation with `seed`
+- Move transport sync via MIDI clock
+- Immediate first step on transport start
+- Safe note-off handling on stop and structural changes
+- Portable DSP engine split from the Schwung host wrapper
+- Native C tests for engine and wrapper behavior
 
-## Prerequisites
+## Transport Behavior
 
-- [Schwung](https://github.com/charlesvestal/move-anything) installed on your Ableton Move
-- SSH enabled if you want to install manually: `http://move.local/development/ssh`
+`nRettap` is clock-driven on Move.
 
-Important for `Pattrn`:
+- `0xFA` starts playback and triggers the first step immediately
+- `0xF8` advances the pattern
+- `0xFC` stops playback and flushes active notes
 
-- `Pattrn` is transport-driven
-- on Move, `Settings -> MIDI -> MIDI Clock Out` must be enabled
-- if `MIDI Clock Out` is disabled, the module correctly stays silent and shows a warning
+This is important for Schwung MIDI FX modules on Move: relying on `tick()` alone can make a module appear idle until another MIDI event arrives.
+
+## Parameters
+
+Main controls:
+
+- `fills`
+- `steps`
+- `rotation`
+- `chance`
+- `phrase`
+- `root`
+- `scale`
+- `rate`
+
+Secondary controls:
+
+- `span`
+- `seed`
 
 ## Installation
 
-### Manual Installation
-
-Run native tests first:
+Run tests first:
 
 ```bash
 make test
@@ -46,83 +58,39 @@ Build for Move:
 ./scripts/build.sh
 ```
 
-Install:
+Install to the default Move host:
 
 ```bash
 ./scripts/install.sh
 ```
 
-Install path on Move:
+Install to a specific host:
 
-```text
-/data/UserData/schwung/modules/midi_fx/pattrn
+```bash
+./scripts/install.sh 192.168.x.x
 ```
 
-## Usage
+The install target is derived from [`src/module.json`](src/module.json), so the module is installed under:
 
-`Pattrn` is a MIDI FX module:
-
-1. Insert `Pattrn` in a chain MIDI FX slot.
-2. Put a synth, sampler, or melodic instrument after it in the same chain.
-3. Enable `MIDI Clock Out` on Move.
-4. Press `Play`.
-5. Shape rhythm with `fills`, `steps`, `rotation`, and `chance`.
-6. Shape melody with `phrase`, `root`, `scale`, `span`, and `seed`.
-
-`Pattrn` does not need an input note to begin playback. It generates directly from transport.
+```text
+/data/UserData/schwung/modules/midi_fx/nrettap
+```
 
 ## Quick Start
 
-Recommended first patch:
+1. Insert `nRettap` in a `MIDI FX` slot.
+2. Put an instrument after it in the same chain.
+3. Set `fills=8`, `steps=8`, `chance=1.0`, `rate=1/16`.
+4. Press `Play`.
+5. Shape the result with `rotation`, `phrase`, `root`, and `scale`.
 
-- `fills = 5`
-- `steps = 8`
-- `rotation = 0`
-- `chance = 1.0`
-- `phrase = pendulum`
-- `root = C`
-- `scale = minor`
-- `rate = 1/16`
-- `span = 2`
-- `seed = 1`
-
-Then try:
-
-- raise `fills` for more activity
-- rotate the pattern to move the accent placement
-- lower `chance` for sparser phrases
-- switch `phrase` to `random` or `thirds`
-- change `seed` for a new deterministic melodic family
-
-## Parameters
-
-### Rhythm
-
-| Parameter | What it does |
-|---|---|
-| `fills` | Number of Euclidean pulses in the pattern. |
-| `steps` | Pattern length from `1` to `16`. |
-| `rotation` | Rotates the Euclidean pattern. |
-| `chance` | Probability that a rhythmic hit actually emits a note. |
-| `rate` | Musical subdivision: `1/8`, `1/16`, `1/32`. |
-
-### Melody
-
-| Parameter | What it does |
-|---|---|
-| `phrase` | Note order strategy: `up`, `down`, `pendulum`, `random`, `thirds`. |
-| `root` | Root note from `C` to `B`. |
-| `scale` | Quantizer scale: `major`, `minor`, `dorian`, `mixolydian`, `pentatonic`, `chromatic`. |
-| `span` | Melodic range in scale spans. |
-| `seed` | Deterministic variation seed. |
+If nothing happens, check that Move MIDI clock is enabled. The module UI exposes a `sync_warn` message when clock is unavailable.
 
 ## Move UI
 
-`Pattrn` uses a minimal full-screen UI for direct access to the main controls and for sync feedback.
+The root UI maps the 8 knobs directly:
 
-Direct knobs:
-
-| Knob | Parameter |
+| Knob | Param |
 |---|---|
 | 1 | `fills` |
 | 2 | `steps` |
@@ -133,79 +101,29 @@ Direct knobs:
 | 7 | `scale` |
 | 8 | `rate` |
 
-Secondary parameters:
+There is also a minimal custom UI in [`src/ui.js`](src/ui.js) to surface clock warnings clearly on-device.
 
-- `span`
-- `seed`
+## Project Layout
 
-Warning behavior:
+- Engine: [`src/dsp/nrettap_engine.h`](src/dsp/nrettap_engine.h), [`src/dsp/nrettap_engine.c`](src/dsp/nrettap_engine.c)
+- Host wrapper: [`src/host/nrettap_plugin.c`](src/host/nrettap_plugin.c)
+- Manifest: [`src/module.json`](src/module.json)
+- Move UI: [`src/ui.js`](src/ui.js)
+- Tests: [`tests/nrettap_engine_test.c`](tests/nrettap_engine_test.c), [`tests/nrettap_midi_fx_test.c`](tests/nrettap_midi_fx_test.c)
 
-- `! Enable MIDI Clock Out` means Move clock status is unavailable
-- `! stopped` means Move sync is available but transport is stopped
+## Development
 
-## Transport Behavior
-
-`Pattrn` is driven by Move transport.
-
-Current behavior:
-
-- first step is emitted immediately on transport start
-- musical advancement follows Move MIDI clock
-- note-offs are scheduled safely inside the same clock-driven path
-- `Stop` flushes active notes
-
-This avoids the common Schwung bug where a module appears to do nothing until a note is played into the chain.
-
-## Troubleshooting
-
-**No output**
-
-- verify a downstream instrument is present after `Pattrn`
-- verify `Settings -> MIDI -> MIDI Clock Out` is enabled on Move
-- verify Move transport is actually running
-- check the warning line in the module UI
-
-**Module appears but stays silent**
-
-- test with `chance = 1.0`
-- set `fills = 8` and `steps = 8`
-- use `scale = chromatic` if you want to rule out scale expectations
-
-**Unexpected melodic behavior**
-
-- try `phrase = up` first
-- lower `span`
-- change `seed`
-
-**Parameter feels inconsistent**
-
-- `fills` is preserved as the requested value for editing and recall
-- the engine may still clamp the effective playback against `steps` internally
-
-## Building from Source
+Useful commands:
 
 ```bash
-make native
 make test
+make native
+make aarch64
 make check-symbols
-./scripts/build.sh
 ```
 
-## Architecture
-
-- portable engine: `src/dsp/pattrn_engine.h` / `src/dsp/pattrn_engine.c`
-- Schwung host wrapper: `src/host/pattrn_plugin.c`
-- manifest: `src/module.json`
-- Move UI: `src/ui.js`
-
-The engine is fully separate from the Schwung wrapper. The wrapper owns transport, MIDI scheduling, parameter parsing, and note lifecycle.
-
-## Credits
-
-- musical inspiration: Renoise `pattrns`
-- Schwung and Move module framework: Charles Vestal and contributors
-- Move adaptation and implementation: this repo
+The expected exported symbol is `move_midi_fx_init`.
 
 ## License
 
-MIT
+This project is MIT-licensed. It is inspired by `pattrns`, but implemented as a clean Move/Schwung adaptation rather than a direct code port.

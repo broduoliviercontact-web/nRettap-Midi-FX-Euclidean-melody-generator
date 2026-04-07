@@ -128,20 +128,6 @@ Returning `0` silently breaks param display, chain editing, and state recall.
 - Initialize `clock_running = 0` in `create_instance` — never 1
 - Free-running modules must NOT call `get_clock_status()` or `get_bpm()` — causes SIGSEGV on some firmware
 - MIDI transport messages `0xFA/0xFB/0xFC` are NOT forwarded to external plugins
-- Hardware note: on Move, a chainable `midi_fx` may still receive transport and MIDI clock bytes in `process_midi()`
-- For clock-driven sequencers/arps, do not assume `tick()` + `get_clock_status()` is enough
-- If playback starts but no notes are emitted, verify whether `0xFA` / `0xF8` arrive in `process_midi()`
-- Proven pattern for clock-driven generators:
-  - emit or arm the first step immediately on `0xFA`
-  - advance pattern timing on `0xF8`
-  - handle scheduled note-offs in the same MIDI clock path when using clock ticks as the primary scheduler
-- Prefer `api_version: 1` in `module.json` unless a different version is already established in the repo and verified on hardware
-
-### Parameter coherence
-- `get_param` should usually return the user-facing requested value, not an internal clamped/effective value
-- If one param is constrained by another (example: `fills` logically capped by `steps`), preserve the requested value separately if recall/editing should round-trip cleanly
-- Avoid hiding cross-param constraints in `ui.js` unless the manifest and UX explicitly require it
-- Be careful with `max_param`: it changes editing semantics, not just display
 
 ### Parameter encoding
 - Float params: clamp 0.0–1.0, scale to `uint8_t` (×255) for the engine, unscale for `get_param`

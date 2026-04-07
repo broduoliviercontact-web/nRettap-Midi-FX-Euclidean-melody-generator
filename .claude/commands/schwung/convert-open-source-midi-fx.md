@@ -59,7 +59,6 @@ Requirements:
 - `get_param` returns `snprintf(...)` — never `return 0`
 - `create_instance` initializes all defaults, `running = 0`
 - Note lifecycle flushed on transport stop and mode changes
-- For clock-driven modules, verify whether transport is owned by `tick()` or by MIDI clock bytes in `process_midi()`
 
 ### Phase 5 — State and Chain Integration
 Verify and finalize:
@@ -86,9 +85,6 @@ Before building for hardware, check cross-file alignment:
 - [ ] `tick()` handles `frames = 0` gracefully
 - [ ] Step accumulator doesn't overflow on long sessions
 - [ ] Clock strategy is consistent (no mixed `get_clock_status()` + constant BPM)
-- [ ] If the module receives `0xF8`, that path is either intentionally consumed for timing or intentionally ignored
-- [ ] `0xFA` / `0xFB` / `0xFC` behavior is explicit and consistent with the chosen scheduler
-- [ ] Time ownership is not duplicated between `tick()` and `process_midi()`
 
 **MIDI pass-through:**
 - [ ] Unrecognized messages are forwarded, not silently dropped
@@ -98,16 +94,10 @@ Before building for hardware, check cross-file alignment:
 - [ ] All params saved in `save_state` are loaded in `load_state`
 - [ ] Missing keys use defaults — no crash on incomplete state
 - [ ] Restoring state does not leave active notes
-- [ ] Requested values vs effective clamped values round-trip cleanly
 
 **Move UX:**
 - [ ] Knob keys match actual parameter keys
 - [ ] No parameter key referenced in `ui.js` or `ui_chain.js` that doesn't exist in the engine
-- [ ] Custom UI does not make a parameter appear stuck by mirroring an internal clamped value
-
-**Manifest sanity:**
-- [ ] `api_version` matches repo conventions and known-good hardware behavior
-- [ ] Capabilities are minimal and proven; no extra flags without a reason
 
 ### Phase 7 — Manifest Finalization
 Use `create-module-json` to finalize `module.json` against the implemented parameter surface.

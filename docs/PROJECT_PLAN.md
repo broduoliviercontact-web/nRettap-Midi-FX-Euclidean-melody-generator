@@ -42,6 +42,6 @@ For each module:
 
 | Module | Status | Description |
 |---|---|---|
-| `tumble` | complete | Probabilistic MIDI generator inspired by Mutable Instruments Marbles |
+| `nrettap` | in progress | Euclidean melody generator inspired by Renoise pattrns |
 
 Add new modules to this table as they are started.

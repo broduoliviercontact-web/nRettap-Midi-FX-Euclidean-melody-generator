@@ -1,0 +1,162 @@
+{
+    "id": "nrettap",
+    "name": "nRettap",
+    "abbrev": "nR",
+    "version": "0.1.0",
+    "description": "Euclidean melody generator inspired by pattrns, adapted for Move",
+    "author": "Inspired by Renoise pattrns; Move adaptation: nRettap",
+    "license": "MIT",
+    "dsp": "dsp.so",
+    "api_version": 1,
+    "capabilities": {
+        "chainable": true,
+        "component_type": "midi_fx",
+        "ui_hierarchy": {
+            "levels": {
+                "root": {
+                    "name": "nRettap",
+                    "knobs": [
+                        "fills",
+                        "steps",
+                        "rotation",
+                        "chance",
+                        "phrase",
+                        "root",
+                        "scale",
+                        "rate"
+                    ],
+                    "params": [
+                        "fills",
+                        "steps",
+                        "rotation",
+                        "chance",
+                        "phrase",
+                        "root",
+                        "scale",
+                        "rate",
+                        "span",
+                        "seed"
+                    ]
+                }
+            }
+        }
+    },
+    "chain_params": [
+        {
+            "key": "fills",
+            "name": "Fills",
+            "type": "int",
+            "min": 0,
+            "max": 16,
+            "default": 5,
+            "step": 1
+        },
+        {
+            "key": "steps",
+            "name": "Steps",
+            "type": "int",
+            "min": 1,
+            "max": 16,
+            "default": 8,
+            "step": 1
+        },
+        {
+            "key": "rotation",
+            "name": "Rotate",
+            "type": "int",
+            "min": -15,
+            "max": 15,
+            "default": 0,
+            "step": 1
+        },
+        {
+            "key": "chance",
+            "name": "Chance",
+            "type": "float",
+            "min": 0.0,
+            "max": 1.0,
+            "default": 0.85,
+            "step": 0.01
+        },
+        {
+            "key": "phrase",
+            "name": "Phrase",
+            "type": "enum",
+            "options": [
+                "up",
+                "down",
+                "pendulum",
+                "random",
+                "thirds"
+            ],
+            "default": "pendulum"
+        },
+        {
+            "key": "root",
+            "name": "Root",
+            "type": "enum",
+            "options": [
+                "C",
+                "C#",
+                "D",
+                "D#",
+                "E",
+                "F",
+                "F#",
+                "G",
+                "G#",
+                "A",
+                "A#",
+                "B"
+            ],
+            "default": "C"
+        },
+        {
+            "key": "scale",
+            "name": "Scale",
+            "type": "enum",
+            "options": [
+                "major",
+                "minor",
+                "dorian",
+                "mixolydian",
+                "phrygian",
+                "lydian",
+                "harmonic_minor",
+                "blues",
+                "pentatonic",
+                "chromatic"
+            ],
+            "default": "minor"
+        },
+        {
+            "key": "rate",
+            "name": "Rate",
+            "type": "enum",
+            "options": [
+                "1/8",
+                "1/16",
+                "1/32"
+            ],
+            "default": "1/16"
+        },
+        {
+            "key": "span",
+            "name": "Span",
+            "type": "int",
+            "min": 1,
+            "max": 4,
+            "default": 2,
+            "step": 1
+        },
+        {
+            "key": "seed",
+            "name": "Seed",
+            "type": "int",
+            "min": 1,
+            "max": 9999,
+            "default": 1,
+            "step": 1
+        }
+    ]
+}

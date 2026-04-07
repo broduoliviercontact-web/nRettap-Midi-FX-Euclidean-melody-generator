@@ -35,13 +35,15 @@ Before drafting, inspect:
 }
 ```
 
-Prefer `api_version: 1` unless the repo already uses another version and that exact choice is verified on hardware.
-
 ## Capabilities Block
 
 Standard MIDI FX:
 ```json
 "capabilities": {
+  "audio_out": false,
+  "audio_in": false,
+  "midi_in": true,
+  "midi_out": true,
   "chainable": true,
   "component_type": "midi_fx",
   "ui_hierarchy": {
@@ -56,8 +58,6 @@ Standard MIDI FX:
 }
 ```
 
-Prefer the smallest proven capabilities block. Do not add `audio_in`, `audio_out`, `midi_in`, or `midi_out` unless the repo already uses them intentionally and hardware behavior has been verified.
-
 ## Parameter Rules
 
 - Prefer 2–8 primary parameters for V1
@@ -65,8 +65,6 @@ Prefer the smallest proven capabilities block. Do not add `audio_in`, `audio_out
 - Every parameter must have a sensible `default`
 - Knob assignments must match the most important controls (ordered by musical priority)
 - `chain_params` should be the live-editable subset — omit parameters that are unsafe to edit in chain context
-- Use `max_param` only when the UX should truly clamp editing live against another parameter
-- If the engine preserves a requested value separately from an effective clamped value, do NOT blindly encode that relationship into `max_param`
 
 ## Supported Types
 

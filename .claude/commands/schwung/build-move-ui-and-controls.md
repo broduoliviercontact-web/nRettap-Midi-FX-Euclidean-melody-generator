@@ -51,7 +51,6 @@ Read `src/module.json` — knobs list, params list, chain_params. Identify:
 - Which parameters are musically critical (direct knob)
 - Which are setup parameters (menu or shift)
 - Which are too dangerous to expose in chain context
-- Which params have separate requested vs effective runtime values
 
 ### Step 2 — Define the Knob Map
 
@@ -122,17 +121,6 @@ if (strcmp(key, "sync_warn") == 0) {
 
 The UI can poll `sync_warn` and display it with a `!` prefix when non-empty. This surfaces configuration problems without hidden failures.
 
-## Requested vs Effective Value Pattern
-
-Custom UI should usually display and edit the user-facing requested value, not an internal clamped/effective value.
-
-Example:
-- `fills` may be internally limited by `steps`
-- the engine can still preserve `requested_fills = 16` while effective playback uses `min(fills, steps) = 8`
-- `ui.js` and `get_param("fills")` should usually continue to reflect `16` if that is the intended editable value
-
-Do not add dynamic UI clamping unless that behavior is an explicit UX decision. Otherwise knobs can appear stuck or snap back unexpectedly.
-
 ---
 
 ## Required Output Format
@@ -170,5 +158,4 @@ Any non-obvious patterns, warning displays, or edge cases in the interaction mod
 - Do not add shift behaviors to hide an oversized parameter surface — reduce the surface instead.
 - Do not let LED behavior distract from the music.
 - Always align control keys with the exact keys in `module.json` and the engine.
-- Do not make a control appear broken by mirroring an internal clamped value in the UI.
 - Keep V1 UI deliberately simple. Complexity can be added later.

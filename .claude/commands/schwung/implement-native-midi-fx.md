@@ -19,7 +19,7 @@ Follow the two-layer split used in this project:
 1. **Portable engine** (`dsp/<module>_engine.h` + `dsp/<module>_engine.c`) — no Schwung/Move headers
 2. **Host wrapper** (`host/<module>_plugin.c`) — Schwung plugin API, MIDI dispatch, param I/O
 
-Inspect the existing module (Tumble) as the reference pattern before implementing.
+Inspect the existing module in this repo as the reference pattern before implementing.
 
 Prefer a clear separation between:
 - instance state
@@ -43,7 +43,7 @@ Create a per-instance struct that contains:
 Document exactly how the module responds to:
 - note on / note off / velocity-0 note on
 - CC
-- MIDI clock (`0xFA/0xFB/0xFC/0xF8`)
+- MIDI clock (note: `0xFA/0xFB/0xFC` are NOT forwarded to external plugins)
 - transport start/stop/continue
 - pass-through of unsupported messages
 
@@ -102,22 +102,6 @@ if (inst->sync_mode == 0 && g_host && g_host->get_clock_status) {
 
 Initialize `running = 0` in `create_instance`. Never initialize to 1.
 
-### Hardware-Proven Clock Pattern
-Do not assume that `tick()` plus `get_clock_status()` is sufficient for every time-based `midi_fx` module.
-
-Hardware-proven Move behavior:
-- the wrapper may receive `0xFA` and repeated `0xF8` in `process_midi()`
-- a sequencer can fail to start on Play if it ignores those clock bytes
-
-For clock-driven sequencers, arps, and generators, prefer this ownership model:
-- `0xFA`: restart transport state and emit or arm the first step immediately
-- `0xFB`: resume running state
-- `0xFC`: stop and flush active notes
-- `0xF8`: advance the sequence timeline
-- note-off scheduling may also need to live in the same `0xF8` path if note duration is expressed in clock ticks
-
-If MIDI clock bytes own the transport timeline, `tick()` should not also advance that same musical clock.
-
 ### Free-Running Clock
 If the module does NOT need transport sync, do NOT call `get_clock_status()` or `get_bpm()` — this causes SIGSEGV on some Move firmware versions.
 
@@ -150,18 +134,10 @@ if (strcmp(key, "sync_warn") == 0) {
 - [ ] Clock behavior is explicit and documented
 - [ ] Transport stop resets `running = 0`
 - [ ] `get_clock_status()` treats UNAVAILABLE as not-running
-- [ ] If the module is clock-driven, ownership of timing between `process_midi(0xF8)` and `tick()` is explicit
-- [ ] `0xFA` behavior is explicit: immediate first step vs armed first step
 - [ ] `sync_warn` or equivalent if transport sync requires user action
 - [ ] State restore is deterministic
 - [ ] `chain_params` matches real parameter support
 - [ ] `get_param` returns `snprintf(...)` for all params, `-1` for unknown
-
-## Requested vs Effective Values
-- If one parameter is constrained by another at runtime, preserve the user-facing requested value when that improves editing and recall
-- Example: keep `requested_fills` separate from effective `fills=min(requested_fills, steps)`
-- `get_param()` and custom UI should usually expose the requested value, not silently rewrite it to the effective one
-- Do not add dynamic UI clamping unless that behavior is truly intended
 
 ## Required Output Format
 When using this skill, produce:
@@ -199,5 +175,4 @@ At the end, review the implementation for:
 - Do not implement chain parameters that are not actually supported.
 - Do not let malformed state crash the module.
 - Do not call `get_clock_status()` or `get_bpm()` in free-running modules.
-- Do not silently split timing ownership between `tick()` and `process_midi()`.
 - Prefer boring reliability over clever abstractions.

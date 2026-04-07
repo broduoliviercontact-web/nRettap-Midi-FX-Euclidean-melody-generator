@@ -10,7 +10,7 @@ $ARGUMENTS
 Follow project conventions. Read `repo-bootstrap` if not already done.
 
 Before writing code, inspect:
-- `src/host/tumble_plugin.c` — the reference host wrapper
+- `src/host/` — the reference host wrapper pattern in this repo
 - `src/host/midi_fx_api_v1.h` — the Schwung MIDI FX plugin interface
 - `src/host/plugin_api_v1.h` — the host API struct (`host_api_v1_t`)
 - `src/dsp/<module>_engine.h` — the engine API this wrapper will drive
@@ -20,9 +20,10 @@ Before writing code, inspect:
 
 The host wrapper (`host/<module>_plugin.c`) must:
 - Include `midi_fx_api_v1.h`, `plugin_api_v1.h`, and the engine header
-- Implement: `move_midi_fx_init()`, `create_instance()`, `destroy_instance()`
+- Implement: `plugin_load()`, `create_instance()`, `destroy_instance()`
 - Implement: `process_midi()`, `tick()`, `set_param()`, `get_param()`
-- Expose these via the `midi_fx_api_v1_t` struct returned by `move_midi_fx_init()`
+- Implement: `save_state()`, `load_state()`
+- Expose these via the `midi_fx_plugin_v1_t` struct returned by `plugin_load()`
 
 ## Per-Instance State Struct
 
@@ -71,26 +72,17 @@ return -1;
 ## `process_midi` Rules
 
 - Inspect `msg[0] & 0xF0` for message type
-- Forward all unrecognized messages via `out_msgs`
+- Forward all unrecognized messages with `host_output_midi()`
 - Track active notes for note-off safety
 - Handle velocity-0 note-on as note-off
-- Do not assume `process_midi()` is only for note input
-- Hardware-proven Move behavior: time-based `midi_fx` modules may receive `0xFA`, `0xFB`, `0xFC`, and repeated `0xF8` here
-- For clock-driven generators/arps:
-  - arm or emit the first step immediately on `0xFA`
-  - advance the pattern on `0xF8`
-  - if note duration is expressed in MIDI clocks, handle note-offs in this path too
-- If playback only starts after a played note, inspect whether the wrapper is ignoring incoming `0xF8` clock bytes
 
 ## `tick` Rules
 
 - Called every audio buffer; use `nframes` to advance timing
 - For transport-synced modules, use the Brindille pattern with `get_clock_status()`
 - For free-running modules, do NOT call `get_clock_status()` or `get_bpm()`
-- Emit scheduled MIDI events via `out_msgs`
+- Emit scheduled MIDI events using `host_output_midi()`
 - Call engine `tick()` and emit results as MIDI note on/off
-- Do not duplicate scheduling across both `tick()` and `process_midi()` without a clear ownership rule
-- If MIDI clock bytes are the primary scheduler, `tick()` should not also advance the same sequence timeline
 
 ## `save_state` / `load_state` Rules
 
@@ -111,13 +103,6 @@ for (int i = 0; i < N_LANES; i++) {
     }
 }
 ```
-
-## Parameter Semantics
-
-- If a parameter has both a requested value and an effective clamped value, decide which one is user-facing
-- Default: `get_param()` should expose the requested value so UI editing and recall round-trip cleanly
-- Example: if `fills` is internally capped by `steps`, preserve requested `fills` separately instead of silently rewriting the visible value
-- Be cautious with `max_param` in `module.json`: it changes editing behavior and can make a control appear "stuck"
 
 ## Return Format
 

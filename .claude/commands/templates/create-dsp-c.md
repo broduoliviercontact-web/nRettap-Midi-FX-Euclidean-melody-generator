@@ -10,10 +10,9 @@ $ARGUMENTS
 Follow project conventions established in this repo. Read `repo-bootstrap` if not already done.
 
 Before writing code, inspect:
-- `src/dsp/tumble_engine.h` — reference engine header pattern
-- `src/dsp/tumble_engine.c` — reference engine implementation
-- `src/host/tumble_plugin.c` — how the engine is used in the host wrapper
-- `tests/tumble_engine_test.c` — test pattern for the engine
+- `src/dsp/` — inspect the existing engine header/implementation pattern in this repo
+- `src/host/` — inspect how the existing engine is driven by the host wrapper
+- `tests/` — inspect the existing engine test pattern in this repo
 
 ## Engine Layer Rules
 
@@ -56,12 +55,10 @@ Note lifecycle:
 
 Clock (if time-based):
 - Make the timing model explicit
-- The portable engine must NOT call `get_clock_status()`, `get_bpm()`, or inspect transport bytes
-- Move/Schwung clock handling belongs in the host wrapper, not in the engine
-- The engine should expose deterministic step/event generation that the wrapper can drive from:
-  - audio-buffer timing in `tick()`
-  - or MIDI clock bytes handled in `process_midi()`
-- If free-running is required, keep that decision in the wrapper and pass the engine explicit timing pulses
+- If using Move transport: use the Brindille pattern with `get_clock_status()`
+- If free-running: use a constant BPM — do NOT call `get_clock_status()` or `get_bpm()`
+- `MOVE_CLOCK_STATUS_UNAVAILABLE` must be treated the same as `STOPPED`
+- Initialize `clock_running = 0` — never 1
 
 MIDI pass-through:
 - Define which messages are consumed, transformed, or forwarded
@@ -86,4 +83,4 @@ Return exactly:
    - timing risk
    - pass-through behavior
 
-Do not generate `module.json`, `tumble_plugin.c`, `ui.js`, or `ui_chain.js` in this step.
+Do not generate `module.json`, `host/<module>_plugin.c`, `ui.js`, or `ui_chain.js` in this step.

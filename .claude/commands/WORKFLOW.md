@@ -207,12 +207,6 @@ Ne pas valider si : des paramètres ne servent à rien, les noms sont flous, les
 **Erreur 7 — Ne pas relire la note lifecycle**
 Toujours vérifier avant de passer à l'étape suivante : stuck notes, note-off manquants, reset sur transport stop.
 
-**Erreur 8 — Supposer que `tick()` suffit pour le transport**
-Sur Move, un `midi_fx` clock-driven peut recevoir `0xFA` et surtout `0xF8` dans `process_midi()`. Si le module démarre seulement après une note jouée, vérifier d'abord si le wrapper ignore les ticks MIDI clock.
-
-**Erreur 9 — Confondre valeur demandée et valeur effective**
-Si un paramètre dépend d'un autre, ne pas forcément refléter la valeur clampée dans l'UI. Exemple typique : `fills` demandé à `16`, `steps` à `8`. Le moteur peut jouer avec `8`, mais l'UI et `get_param` doivent souvent continuer à refléter `16`.
-
 ---
 
 ## Ce qu'on attend à chaque étape
@@ -225,11 +219,6 @@ Si un paramètre dépend d'un autre, ne pas forcément refléter la valeur clamp
 | `create-dsp-c` | "Le moteur est propre, les stuck notes sont impossibles" |
 | `create-host-wrapper` | "Tous les paramètres sont exposés et testés" |
 | `build-and-install` | "Ça tourne sur Move, le hardware test est passé" |
-
-Ajout pratique pour les modules clock-driven :
-- `0xFA` : premier pas immédiat ou explicitement armé
-- `0xF8` : avancée du pattern si le wrapper choisit le scheduler MIDI clock
-- `0xFC` : flush note-off garanti
 
 ---
 
