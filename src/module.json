@@ -1,14 +1,17 @@
 {
     "id": "nrettap",
     "name": "nRettap",
-    "abbrev": "nR",
-    "version": "0.1.0",
+    "abbrev": "NRT",
+    "version": "0.1.1",
+    "api_version": 2,
     "description": "Euclidean melody generator inspired by pattrns, adapted for Move",
-    "author": "Inspired by Renoise pattrns; Move adaptation: nRettap",
+    "author": "nRettap",
     "license": "MIT",
     "dsp": "dsp.so",
-    "api_version": 1,
+    "ui": "ui.js",
     "capabilities": {
+        "midi_in": true,
+        "midi_out": true,
         "chainable": true,
         "component_type": "midi_fx",
         "ui_hierarchy": {

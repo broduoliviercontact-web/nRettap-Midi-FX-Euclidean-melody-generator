@@ -73,6 +73,22 @@ Returning `0` silently breaks param display, chain editing, and state recall.
 - Float params: clamp 0.0–1.0, encode as `uint8_t` × 255 in the engine, decode for `get_param`
 - Every parameter needs: default in `create_instance`, `set_param` handler, `get_param` handler, entry in `module.json`
 - Enum params: validate against known values, fall through to default on unknown
+- Move may send params in multiple string forms depending on context:
+  - raw ints like `"7"` or `"-12"`
+  - raw float strings like `"7.0000"` or `"64.0000"`
+  - normalized float strings like `"0.5000"`
+- Int and enum parsing should handle all three forms when the parameter is editable from the UI or chain context
+- `chain_params` must use full parameter objects, not just key strings, if chain editing needs to work reliably
+- Keep enum option order stable once a module is in use — normalized knob values map by enum index
+- Signed transpose-style params are valid and useful on Move; if negative values are musical, encode them explicitly in `module.json`
+- Prefer paired macro/fine parameter design for generative modules:
+  - macro range + fine spread
+  - overall density + rest shaping
+  - chaos + resolve
+- For melodic modules, treat scales as first-class design data:
+  - define the scale list before coding
+  - keep engine enum order, wrapper names, manifest options, and docs aligned
+  - start from a compact, musical palette rather than an exhaustive theory list
 
 ### Note lifecycle
 - Always send note-off before resetting or changing active note state
@@ -88,13 +104,14 @@ Returning `0` silently breaks param display, chain editing, and state recall.
 | Starting a session or switching context | `commands/schwung/repo-bootstrap.md` |
 | Evaluating portability of an external project | `commands/schwung/audit-open-source-midi-fx.md` |
 | Defining a module before writing code | `commands/schwung/design-module.md` |
-| Implementing a native MIDI FX engine | `commands/schwung/implement-native-midi-fx.md` |
+| Reviewing or improving an existing implementation | `commands/schwung/implement-native-midi-fx.md` |
 | Building the Move control surface | `commands/schwung/build-move-ui-and-controls.md` |
 | Reviewing cross-file coherence | `commands/schwung/convert-open-source-midi-fx.md` |
 | Building, deploying, hardware testing | `commands/schwung/build-and-install.md` |
 | Generating `module.json` | `commands/templates/create-module-json.md` |
 | Generating the portable engine | `commands/templates/create-dsp-c.md` |
 | Generating the host wrapper | `commands/templates/create-host-wrapper.md` |
+| Generating native tests | `commands/templates/create-test.md` |
 
 Full workflow guide: `.claude/commands/WORKFLOW.md`
 
@@ -109,6 +126,9 @@ Full workflow guide: `.claude/commands/WORKFLOW.md`
 5. **Chasing feature parity** — the goal is a good Schwung module, not a faithful clone
 6. **Skipping native tests** — always run `make test` before deploying to hardware
 7. **`get_param` returning 0** — this silently breaks everything. Always return `snprintf(...)`.
+8. **Assuming Move sends only one param format** — UI, state recall, and chain editing may send raw or normalized strings.
+9. **Using string arrays for `chain_params`** — use full parameter objects or chain editing may not behave correctly.
+10. **Overloading a single parameter with two musical jobs** — split total density from silence shape when needed.
 
 ---
 
@@ -136,6 +156,6 @@ Full build docs: `BUILDING.md`
 
 1. Read this file
 2. Read `docs/MODULES.md` — full API reference
-3. Read `src/module.json` — current parameter surface
-4. Inspect the existing module in `src/`
+3. Read `src/host/midi_fx_api_v1.h` and `src/host/plugin_api_v1.h` — host API contracts
+4. If a module exists: read `src/module.json` and inspect `src/dsp/` and `src/host/`
 5. Run `commands/schwung/repo-bootstrap.md` and write an implementation brief before coding

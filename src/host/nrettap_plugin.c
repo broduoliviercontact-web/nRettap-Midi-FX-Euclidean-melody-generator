@@ -345,7 +345,7 @@ static void *nrettap_create_instance(const char *module_dir, const char *config_
     (void)config_json;
 
     NRettapInstance *instance = (NRettapInstance *)calloc(1, sizeof(NRettapInstance));
-    int clock_status = MOVE_CLOCK_STATUS_RUNNING;
+    int clock_status = MOVE_CLOCK_STATUS_STOPPED;
     if (!instance) return NULL;
 
     nrettap_init(&instance->engine);
@@ -451,6 +451,10 @@ static int nrettap_tick_wrapper(void *state,
             instance->running = 1u;
             restart_playback(instance);
         }
+    } else if (!instance->running) {
+        /* No clock callback — free-run (test/non-Move context) */
+        instance->running = 1u;
+        restart_playback(instance);
     }
 
     if (!instance->running) return 0;
