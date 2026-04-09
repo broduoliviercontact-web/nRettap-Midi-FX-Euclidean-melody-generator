@@ -4,6 +4,7 @@
   "description": "Euclidean melody generator inspired by pattrns, adapted for Move",
   "component_type": "midi_fx",
   "latest_version": "0.1.1",
-  "download_url": "https://github.com/broduoliviercontact-web/nRettap-Midi-FX-Euclidean-melody-generator/releases/download/v0.1.1/nrettap-module.tar.gz",
-  "repo_url": "https://github.com/broduoliviercontact-web/nRettap-Midi-FX-Euclidean-melody-generator"
+  "download_url": "https://github.com/broduoliviercontact-web/Schwung-Midi-Fx-nRettap-Euclidean-melody-generator/releases/download/v0.1.1/nrettap-module.tar.gz",
+  "repo_url": "https://github.com/broduoliviercontact-web/nRettap-Midi-FX-Euclidean-melody-generator",
+  "version": "0.1.1"
 }
