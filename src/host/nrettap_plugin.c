@@ -57,28 +57,31 @@ static void host_logf(const char *fmt, ...)
     g_host->log(buf);
 }
 
-static void file_logf(const char *fmt, ...)
+
+/* Extract a JSON string value for a given key into dest (max dest_len).
+   Handles simple flat JSON objects like {"key":"value","key2":"value2"}.
+   Returns 1 on success, 0 if key not found. */
+static int json_extract_string(const char *json, const char *key, char *dest, int dest_len)
 {
-    FILE *fp;
-    char buf[256];
-    va_list ap;
-    int written;
+    char search[64];
+    const char *p, *start, *end;
+    int len;
 
-    if (!fmt) return;
+    if (!json || !key || !dest || dest_len <= 0) return 0;
 
-    fp = fopen("/tmp/nrettap_debug.log", "a");
-    if (!fp) return;
+    snprintf(search, sizeof(search), "\"%s\":\"", key);
+    p = strstr(json, search);
+    if (!p) return 0;
 
-    va_start(ap, fmt);
-    written = vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    if (written >= 0) {
-        buf[sizeof(buf) - 1] = '\0';
-        fputs(buf, fp);
-        fputc('\n', fp);
-    }
+    start = p + strlen(search);
+    end = strchr(start, '"');
+    if (!end) return 0;
 
-    fclose(fp);
+    len = (int)(end - start);
+    if (len >= dest_len) len = dest_len - 1;
+    memcpy(dest, start, len);
+    dest[len] = '\0';
+    return 1;
 }
 
 static uint8_t parse_norm(const char *s)
@@ -284,10 +287,6 @@ static int emit_engine_step(NRettapInstance *instance,
                       (unsigned)note,
                       (unsigned)velocity,
                       (unsigned)step_frames);
-            file_logf("nrettap:first_emit note=%u vel=%u step_frames=%u",
-                      (unsigned)note,
-                      (unsigned)velocity,
-                      (unsigned)step_frames);
             instance->debug_logged_emit = 1u;
         }
 
@@ -365,10 +364,6 @@ static void *nrettap_create_instance(const char *module_dir, const char *config_
                   (unsigned)instance->sample_rate,
                   clock_status,
                   (unsigned)instance->running);
-        file_logf("nrettap:create sr=%u clock_status=%d running=%u",
-                  (unsigned)instance->sample_rate,
-                  clock_status,
-                  (unsigned)instance->running);
         instance->debug_logged_create = 1u;
     }
 
@@ -389,7 +384,6 @@ static int nrettap_process_midi(void *state,
 
     if (in_msg[0] == 0xFA || in_msg[0] == 0xFB || in_msg[0] == 0xFC || in_msg[0] == 0xF8) {
         host_logf("nrettap:process_midi status=0x%02X running=%u", (unsigned)in_msg[0], (unsigned)instance->running);
-        file_logf("nrettap:process_midi status=0x%02X running=%u", (unsigned)in_msg[0], (unsigned)instance->running);
     }
 
     if (in_msg[0] == 0xFA) {
@@ -435,7 +429,6 @@ static int nrettap_tick_wrapper(void *state,
     instance->sample_rate = (uint32_t)use_sample_rate;
     if (!instance->debug_logged_tick) {
         host_logf("nrettap:first_tick frames=%d sr=%d running=%u", frames, use_sample_rate, (unsigned)instance->running);
-        file_logf("nrettap:first_tick frames=%d sr=%d running=%u", frames, use_sample_rate, (unsigned)instance->running);
         instance->debug_logged_tick = 1u;
     }
 
@@ -565,6 +558,29 @@ static void nrettap_set_param(void *state, const char *key, const char *val)
     } else if (strcmp(key, "seed") == 0) {
         nrettap_set_seed(&instance->engine, parse_seed(val));
         instance->reset_pending = 1u;
+    } else if (strcmp(key, "state") == 0) {
+        /* Restore all parameters from a JSON state blob. */
+        char tmp[64];
+        if (json_extract_string(val, "steps", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "steps", tmp);
+        if (json_extract_string(val, "fills", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "fills", tmp);
+        if (json_extract_string(val, "rotation", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "rotation", tmp);
+        if (json_extract_string(val, "chance", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "chance", tmp);
+        if (json_extract_string(val, "phrase", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "phrase", tmp);
+        if (json_extract_string(val, "root", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "root", tmp);
+        if (json_extract_string(val, "scale", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "scale", tmp);
+        if (json_extract_string(val, "rate", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "rate", tmp);
+        if (json_extract_string(val, "span", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "span", tmp);
+        if (json_extract_string(val, "seed", tmp, sizeof(tmp)))
+            nrettap_set_param(state, "seed", tmp);
     }
 }
 
@@ -604,6 +620,23 @@ static int nrettap_get_param(void *state, const char *key, char *buf, int buf_le
             }
         }
         return snprintf(buf, buf_len, "%s", "");
+    }
+    if (strcmp(key, "state") == 0) {
+        return snprintf(buf, buf_len,
+            "{\"steps\":\"%u\",\"fills\":\"%u\",\"rotation\":\"%d\","
+            "\"chance\":\"%.4f\",\"phrase\":\"%s\",\"root\":\"%s\","
+            "\"scale\":\"%s\",\"rate\":\"%s\",\"span\":\"%u\","
+            "\"seed\":\"%u\"}",
+            instance->engine.steps,
+            instance->engine.requested_fills,
+            instance->engine.rotation,
+            instance->engine.chance / 255.0f,
+            phrase_values[instance->engine.phrase],
+            root_values[instance->engine.root % 12u],
+            scale_values[instance->engine.scale],
+            rate_values[instance->rate_mode],
+            instance->engine.span,
+            instance->engine.seed);
     }
 
     return -1;
